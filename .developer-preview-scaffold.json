@@ -1,0 +1,99 @@
+{
+  "schemaVersion": "toolkit.developer-preview-public-repo-scaffold.v1",
+  "packageName": "toolkit-builtins",
+  "generatedAt": "2026-08-08T13:39:23.847Z",
+  "boundaryVersion": "toolkit.community-package-boundary.v1",
+  "cleanSplitMode": "clean-directory-no-private-history",
+  "registryTrust": "disabled-for-developer-preview",
+  "forbiddenClaims": [
+    "community ga",
+    "self-hosted edition",
+    "stable registry v1",
+    "production public registry",
+    "cloud plans ready",
+    "currently-trusted registry"
+  ],
+  "sourceFiles": [
+    {
+      "path": "scripts/builtin_tools.js",
+      "byteLength": 30201,
+      "digest": "sha256:6ebd1d8eeaca129f81379f8fb8a89299ecf3068c84444c7d8c799f276eab1237",
+      "generated": false
+    },
+    {
+      "path": "server/src/builtin_public_manifest.js",
+      "byteLength": 5127,
+      "digest": "sha256:40e326df37a359f9d6fc79c1aea1beeaeb68ff141c632ae36e68d742bccd3a19",
+      "generated": false
+    }
+  ],
+  "fixtureFiles": [],
+  "generatedFiles": [
+    {
+      "path": "LICENSE",
+      "byteLength": 157,
+      "digest": "sha256:a01a1ab7154a3d179cf98fecd75853d460d9c48291d7d4de4b8a0928cbeb6107",
+      "generated": true
+    },
+    {
+      "path": "SECURITY.md",
+      "byteLength": 188,
+      "digest": "sha256:ea0c646c5f498a1b027ad5f88b94b52e5102cac738b36efdd1d82bbb509d94c0",
+      "generated": true
+    },
+    {
+      "path": "CONTRIBUTING.md",
+      "byteLength": 206,
+      "digest": "sha256:db5422e0838d0b76e33fc2ecf473ad93379550223f2812ef1ae779f6af60edc8",
+      "generated": true
+    },
+    {
+      "path": "CODE_OF_CONDUCT.md",
+      "byteLength": 150,
+      "digest": "sha256:00798b0385384d520956a44025cd14c04d18edbe665ef7a0e6199cd8670c758d",
+      "generated": true
+    },
+    {
+      "path": "README.md",
+      "byteLength": 845,
+      "digest": "sha256:d3986065074e862af0735258b5b995be44f9bbb330b4a31922dd592ce48da8ab",
+      "generated": true
+    },
+    {
+      "path": "package.json",
+      "byteLength": 407,
+      "digest": "sha256:25b3dc4e79c5a2a6fefa2c9fcf077489ad9ced7c3b7874b6a3fc313a0e152afe",
+      "generated": true
+    },
+    {
+      "path": "NOTICE",
+      "byteLength": 175,
+      "digest": "sha256:af9927da27d4edfc92b36c250dfed548762b5a47232011381b958c9ed85b8e55",
+      "generated": true
+    },
+    {
+      "path": ".github/workflows/ci.yml",
+      "byteLength": 544,
+      "digest": "sha256:9674e2705e85b83f1b76e89e5efa34fe0c31a43acb9f9d4ccddf446046cb123c",
+      "generated": true
+    },
+    {
+      "path": ".github/workflows/release.yml",
+      "byteLength": 1224,
+      "digest": "sha256:a2d82357b1ef6ec8a470a17590449b6ef9f6be4da8b969f00c3c532aa128dc7a",
+      "generated": true
+    }
+  ],
+  "requiredPublicFiles": [
+    "LICENSE",
+    "SECURITY.md",
+    "CONTRIBUTING.md",
+    "CODE_OF_CONDUCT.md",
+    "README.md",
+    "package.json",
+    ".github/workflows/ci.yml",
+    ".github/workflows/release.yml"
+  ],
+  "protocolConformanceBundleDigest": "",
+  "digest": "sha256:f99ad1973f76232a9f336c7ff4059ffe79e336e2affa19ebdd7668069b865dba"
+}

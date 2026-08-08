@@ -1,0 +1,40 @@
+name: Release Preview Package
+
+on:
+  workflow_dispatch:
+    inputs:
+      publish:
+        description: 'Set to true only after release evidence is approved'
+        required: true
+        default: 'false'
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  release:
+    name: Release toolkit-builtins
+    runs-on: ubuntu-latest
+    environment: npm-preview
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - name: Setup Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
+          registry-url: 'https://registry.npmjs.org'
+      - name: Run package tests
+        run: npm test
+      - name: Pack final tarball candidate
+        run: npm pack --json > npm-pack-output.json
+      - name: Publish dry run
+        if: github.event_name != 'workflow_dispatch' || github.event.inputs.publish != 'true'
+        run: npm publish --provenance --access public --dry-run
+      - name: Publish Developer Preview
+        if: github.event_name == 'workflow_dispatch' && github.event.inputs.publish == 'true'
+        run: npm publish --provenance --access public

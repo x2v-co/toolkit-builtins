@@ -1,0 +1,16 @@
+{
+  "name": "@toolkit-fun/builtins",
+  "version": "0.1.0-preview.0",
+  "private": false,
+  "type": "module",
+  "license": "Apache-2.0",
+  "description": "toolkit-builtins Developer Preview public repository scaffold",
+  "keywords": [
+    "toolkit",
+    "developer-preview"
+  ],
+  "scripts": {
+    "test": "node -e \"console.log(\\\"Developer Preview scaffold metadata ok\\\")\""
+  },
+  "dependencies": {}
+}
