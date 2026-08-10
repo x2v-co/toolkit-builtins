@@ -34,7 +34,7 @@ jobs:
         run: npm pack --json > npm-pack-output.json
       - name: Publish dry run
         if: github.event_name != 'workflow_dispatch' || github.event.inputs.publish != 'true'
-        run: npm publish --provenance --access public --dry-run
+        run: npm publish --provenance --access public --tag preview --dry-run
       - name: Publish Developer Preview
         if: github.event_name == 'workflow_dispatch' && github.event.inputs.publish == 'true'
-        run: npm publish --provenance --access public
+        run: npm publish --provenance --access public --tag preview
