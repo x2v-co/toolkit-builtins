@@ -1,7 +1,7 @@
 {
   "schemaVersion": "toolkit.developer-preview-public-repo-scaffold.v1",
   "packageName": "toolkit-builtins",
-  "generatedAt": "2026-08-08T13:57:50.290Z",
+  "generatedAt": "2026-09-03T13:28:10.703Z",
   "boundaryVersion": "toolkit.community-package-boundary.v1",
   "cleanSplitMode": "clean-directory-no-private-history",
   "registryTrust": "disabled-for-developer-preview",
@@ -16,8 +16,8 @@
   "sourceFiles": [
     {
       "path": "scripts/builtin_tools.js",
-      "byteLength": 30201,
-      "digest": "sha256:6ebd1d8eeaca129f81379f8fb8a89299ecf3068c84444c7d8c799f276eab1237",
+      "byteLength": 44868,
+      "digest": "sha256:54efa168e99546d10eefe9818ddf5a46f7a3d2a90d8628ccc02f5ab450da6e11",
       "generated": false
     },
     {
@@ -95,5 +95,5 @@
     ".github/workflows/release.yml"
   ],
   "protocolConformanceBundleDigest": "",
-  "digest": "sha256:97c6d108af51507ee97035c7e9110010198d14e800499a544e2c43a5724e2b8d"
+  "digest": "sha256:e2b2980ba7887f18c8d245e18a926fd52efc1abab7d10493e7a898f997ca6963"
 }

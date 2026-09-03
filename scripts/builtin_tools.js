@@ -6,6 +6,83 @@
 
 export const BUILTIN_TOOLS = [
   {
+    slug: 'youtube-url-normalize',
+    name: 'YouTube 链接规范化',
+    category: '视频',
+    io: { input: 'text', output: 'text' },
+    desc: '从 YouTube watch、短链接、Shorts、embed 或 live 链接中提取视频 ID，并生成规范链接。',
+    sampleIn: 'https://youtu.be/dQw4w9WgXcQ?t=42',
+    params: [],
+    source: `function transform(input, params, ctx) {
+  const raw = String(input || '').trim();
+  if (!raw) throw new Error('请输入 YouTube URL 或 11 位视频 ID');
+  let videoId = '';
+  if (/^[A-Za-z0-9_-]{11}$/.test(raw)) videoId = raw;
+  else {
+    let url;
+    try { url = new URL(raw); } catch { throw new Error('无效的 YouTube URL'); }
+    const host = url.hostname.toLowerCase().replace(/^www\\./, '');
+    if (host === 'youtu.be') videoId = url.pathname.split('/').filter(Boolean)[0] || '';
+    else if (host === 'youtube.com' || host === 'm.youtube.com') {
+      if (url.pathname === '/watch') videoId = url.searchParams.get('v') || '';
+      else {
+        const parts = url.pathname.split('/').filter(Boolean);
+        if (['shorts', 'embed', 'live', 'v'].includes(parts[0])) videoId = parts[1] || '';
+      }
+    } else throw new Error('仅支持 youtube.com、m.youtube.com 和 youtu.be');
+  }
+  if (!/^[A-Za-z0-9_-]{11}$/.test(videoId)) throw new Error('无法提取有效的 YouTube 视频 ID');
+  return JSON.stringify({ schemaVersion: 'toolkit.youtube-state.v1', videoId,
+    canonicalUrl: 'https://www.youtube.com/watch?v=' + videoId });
+}`,
+  },
+
+  {
+    slug: 'youtube-oembed-read',
+    name: 'YouTube 公开信息获取',
+    category: '视频',
+    io: { input: 'text', output: 'text' },
+    desc: '通过 YouTube oEmbed 获取公开标题、作者、频道、缩略图和嵌入信息，无需 API Key。',
+    sampleIn: '{"schemaVersion":"toolkit.youtube-state.v1","videoId":"dQw4w9WgXcQ","canonicalUrl":"https://www.youtube.com/watch?v=dQw4w9WgXcQ"}',
+    params: [],
+    sandbox: { net: true, netHosts: ['www.youtube.com'], timeoutMs: 10000 },
+    flags: ['net'],
+    source: `async function transform(input, params, ctx) {
+  let state;
+  try { state = JSON.parse(String(input || '')); } catch { throw new Error('需要先执行 YouTube 链接规范化'); }
+  if (state.schemaVersion !== 'toolkit.youtube-state.v1' || !state.videoId) throw new Error('无效的 YouTube workflow 状态');
+  const endpoint = 'https://www.youtube.com/oembed?format=json&url=' + encodeURIComponent(state.canonicalUrl);
+  const data = await ctx.http(endpoint, { method: 'GET', timeoutMs: 8000, maxResponseBytes: 262144 });
+  if (!data || typeof data !== 'object') throw new Error('YouTube oEmbed 返回格式无效');
+  return JSON.stringify({ ...state, metadata: { source: 'youtube-oembed',
+    title: String(data.title || ''), authorName: String(data.author_name || ''),
+    authorUrl: String(data.author_url || ''), thumbnailUrl: String(data.thumbnail_url || ''),
+    thumbnailWidth: Number(data.thumbnail_width || 0), thumbnailHeight: Number(data.thumbnail_height || 0),
+    embedHtml: String(data.html || '') } });
+}`,
+  },
+
+  {
+    slug: 'youtube-info-format',
+    name: 'YouTube 信息格式化',
+    category: '视频',
+    io: { input: 'text', output: 'key-value' },
+    desc: '将 YouTube workflow 状态格式化为可读文本和键值视图；不可用字段会被省略。',
+    sampleIn: '{"schemaVersion":"toolkit.youtube-state.v1","videoId":"dQw4w9WgXcQ","canonicalUrl":"https://www.youtube.com/watch?v=dQw4w9WgXcQ","metadata":{"title":"Example"}}',
+    params: [],
+    source: `function transform(input, params, ctx) {
+  let state;
+  try { state = JSON.parse(String(input || '')); } catch { throw new Error('需要 JSON workflow 状态'); }
+  const m = state.metadata || {};
+  const rows = [['标题', String(m.title || '')], ['作者', String(m.authorName || '')],
+    ['频道主页', String(m.authorUrl || '')], ['视频 ID', String(state.videoId || '')],
+    ['规范链接', String(state.canonicalUrl || '')], ['缩略图', String(m.thumbnailUrl || '')],
+    ['嵌入代码', String(m.embedHtml || '')]].filter((row) => row[1] !== '');
+  return { text: rows.map((row) => row[0] + ': ' + row[1]).join('\\n'), view: { kind: 'kv', rows } };
+}`,
+  },
+
+  {
     slug: 'json-pretty',
     name: 'JSON 美化 / 排序',
     category: '数据格式',
@@ -690,6 +767,224 @@ export const BUILTIN_TOOLS = [
     if (hit[0] === '') re.lastIndex++;
   }
   return count ? '共 ' + count + ' 处匹配\\n' + out.join('\\n') : '无匹配';
+}`,
+  },
+
+  {
+    slug: 'image-data-url-inspect',
+    name: '图片信息读取',
+    category: '图像',
+    io: { input: 'image', output: 'image' },
+    desc: '读取上传或粘贴的图片（base64 data URL），纯 JS 解析 PNG/GIF/JPEG 的宽高与字节数，并把原图回传以便预览和下载。',
+    sampleIn: '',
+    params: [],
+    source: `function transform(input, params, ctx) {
+  const raw = String(input || '').trim();
+  const m = raw.match(/^data:([\\w.+-]+\\/[\\w.+-]+);base64,(.*)$/);
+  if (!m) throw new Error('请输入图片 data URL（data:image/...;base64,...），可直接粘贴、拖入或上传图片');
+  const mediaType = m[1].toLowerCase();
+  if (mediaType.indexOf('image/') !== 0) throw new Error('仅支持图片输入（image/*）');
+  const b64 = m[2].replace(/\\s+/g, '');
+  const bin = atob(b64);
+  const bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  const dv = new DataView(bytes.buffer);
+  let w = 0, h = 0, kind = '';
+  if (bytes[0] === 0x89 && bytes[1] === 0x50) {
+    kind = 'PNG'; w = dv.getUint32(16); h = dv.getUint32(20);
+  } else if (bin.slice(0, 6) === 'GIF87a' || bin.slice(0, 6) === 'GIF89a') {
+    kind = 'GIF'; w = dv.getUint16(6, true); h = dv.getUint16(8, true);
+  } else if (bytes[0] === 0xFF && bytes[1] === 0xD8) {
+    kind = 'JPEG';
+    let i = 2;
+    while (i + 4 < bytes.length) {
+      if (bytes[i] !== 0xFF) { i++; continue; }
+      const marker = bytes[i + 1];
+      if (marker >= 0xC0 && marker <= 0xCF && marker !== 0xC4 && marker !== 0xC8 && marker !== 0xCC) {
+        h = dv.getUint16(i + 5); w = dv.getUint16(i + 7); break;
+      }
+      i += 2 + dv.getUint16(i + 2);
+    }
+  } else {
+    kind = (mediaType.split('/')[1] || 'image').toUpperCase();
+  }
+  const ext = kind === 'JPEG' ? 'jpg' : kind.toLowerCase();
+  const text = '图片信息' + '\\n' + [
+    '类型: ' + kind + ' (' + mediaType + ')',
+    '尺寸: ' + (w ? (w + ' × ' + h + ' px') : '未知（该格式未解析尺寸）'),
+    '大小: ' + bytes.length + ' bytes',
+  ].join('\\n');
+  return {
+    text: text,
+    files: [{ name: 'image.' + ext, mediaType: mediaType, dataUrl: raw }],
+  };
+}`,
+  },
+
+  {
+    slug: 'qrcode-generate',
+    name: '二维码生成',
+    category: '图像',
+    io: { input: 'text', output: 'image' },
+    desc: '把文字或链接生成可扫描的二维码（自动选择 v1–v10 版本、字节模式、L 容错），输出为 SVG 图片，可直接预览或下载。纯 JS 实现，无外部依赖。',
+    sampleIn: 'https://toolkit.fun',
+    params: [],
+    source: `function transform(input, params, ctx) {
+  // QR Code 版本 1-10、字节模式、纠错级 L（表格按版本索引，0 => v1）
+  var BLOCKS = [1, 1, 1, 1, 1, 2, 2, 2, 2, 4];            // EC 分块数
+  var ECPER = [7, 10, 15, 20, 26, 18, 20, 24, 30, 18];   // 每块 EC 码字数
+  var DATA = [19, 34, 55, 80, 108, 136, 156, 194, 232, 274]; // 数据码字数
+  var CAP = [17, 32, 53, 78, 106, 134, 154, 192, 230, 271];  // 最大字节负载
+  var ALIGN = [[], [6, 18], [6, 22], [6, 26], [6, 30], [6, 34], [6, 22, 38], [6, 24, 42], [6, 26, 46], [6, 28, 50]];
+  var VINFO = { 7: 0x07C94, 8: 0x085BC, 9: 0x09A99, 10: 0x0A4D3 };
+
+  function build(text) {
+    var bytes = new TextEncoder().encode(text);
+    var version = 0;
+    for (var v = 0; v < 10; v++) { if (bytes.length <= CAP[v]) { version = v + 1; break; } }
+    if (!version) throw new Error('too_long');
+    var vi = version - 1;
+    var N = 17 + 4 * version;
+    var dataTotal = DATA[vi], ecPer = ECPER[vi], nBlocks = BLOCKS[vi];
+    var ccBits = version >= 10 ? 16 : 8;
+
+    var M = [], R = [];
+    for (var i = 0; i < N; i++) { M.push(new Array(N).fill(0)); R.push(new Array(N).fill(false)); }
+    function inB(r, c) { return r >= 0 && r < N && c >= 0 && c < N; }
+    function putF(r, c, val) { if (inB(r, c)) { M[r][c] = val ? 1 : 0; R[r][c] = true; } }
+    function resv(r, c) { if (inB(r, c)) R[r][c] = true; }
+
+    function finder(r0, c0) {
+      for (var dr = -1; dr <= 7; dr++) for (var dc = -1; dc <= 7; dc++) {
+        var r = r0 + dr, c = c0 + dc; if (!inB(r, c)) continue;
+        var val = 0;
+        if (dr >= 0 && dr <= 6 && (dc === 0 || dc === 6)) val = 1;
+        else if (dc >= 0 && dc <= 6 && (dr === 0 || dr === 6)) val = 1;
+        else if (dr >= 2 && dr <= 4 && dc >= 2 && dc <= 4) val = 1;
+        putF(r, c, val);
+      }
+    }
+    finder(0, 0); finder(0, N - 7); finder(N - 7, 0);
+    for (var t = 8; t < N - 8; t++) { var tv = (t % 2 === 0) ? 1 : 0; putF(t, 6, tv); putF(6, t, tv); }
+
+    var ac = ALIGN[vi];
+    for (var ai = 0; ai < ac.length; ai++) for (var aj = 0; aj < ac.length; aj++) {
+      if ((ai === 0 && aj === 0) || (ai === 0 && aj === ac.length - 1) || (ai === ac.length - 1 && aj === 0)) continue;
+      var ar = ac[ai], acx = ac[aj];
+      for (var dr = -2; dr <= 2; dr++) for (var dc = -2; dc <= 2; dc++) {
+        var dark = (dr === -2 || dr === 2 || dc === -2 || dc === 2 || (dr === 0 && dc === 0)) ? 1 : 0;
+        putF(ar + dr, acx + dc, dark);
+      }
+    }
+    putF(N - 8, 8, 1);
+
+    for (var fi = 0; fi < 15; fi++) {
+      if (fi < 6) resv(fi, 8); else if (fi < 8) resv(fi + 1, 8); else resv(N - 15 + fi, 8);
+      if (fi < 8) resv(8, N - fi - 1); else if (fi < 9) resv(8, 15 - fi - 1 + 1); else resv(8, 15 - fi - 1);
+    }
+    var vb = null;
+    if (version >= 7) {
+      vb = VINFO[version];
+      for (var k = 0; k < 18; k++) { var vr = Math.floor(k / 3), vcc = k % 3 + N - 11; resv(vr, vcc); resv(vcc, vr); }
+    }
+
+    var bits = [];
+    function push(val, n) { for (var k = n - 1; k >= 0; k--) bits.push((val >>> k) & 1); }
+    push(0x4, 4);                 // 字节模式
+    push(bytes.length, ccBits);   // 字符计数
+    for (var bi = 0; bi < bytes.length; bi++) push(bytes[bi], 8);
+    var term = Math.min(4, dataTotal * 8 - bits.length);
+    for (var te = 0; te < term; te++) bits.push(0);
+    while (bits.length % 8 !== 0) bits.push(0);
+    var dataCw = [];
+    for (var b = 0; b + 8 <= bits.length; b += 8) { var by = 0; for (var k2 = 0; k2 < 8; k2++) by = (by << 1) | bits[b + k2]; dataCw.push(by); }
+    var pads = [0xEC, 0x11], pi = 0;
+    while (dataCw.length < dataTotal) dataCw.push(pads[pi++ % 2]);
+    dataCw = dataCw.slice(0, dataTotal);
+
+    var EXP = new Uint8Array(512), LOG = new Uint8Array(256), xx = 1;
+    for (var e = 0; e < 255; e++) { EXP[e] = xx; LOG[xx] = e; xx <<= 1; if (xx & 0x100) xx ^= 0x11D; }
+    for (e = 255; e < 512; e++) EXP[e] = EXP[e - 255];
+    function gmul(a, b) { if (!a || !b) return 0; return EXP[LOG[a] + LOG[b]]; }
+    function polyMul(p1, p2) { var o = new Array(p1.length + p2.length - 1).fill(0);
+      for (var x = 0; x < p1.length; x++) for (var y = 0; y < p2.length; y++) o[x + y] ^= gmul(p1[x], p2[y]); return o; }
+    function rsEc(darr, deg) {
+      var gen = [1];
+      for (var gi = 0; gi < deg; gi++) gen = polyMul(gen, [1, EXP[gi]]);
+      var rem = darr.slice().concat(new Array(deg).fill(0));
+      while (rem.length - gen.length >= 0) {
+        var cf = rem[0];
+        for (var gj = 0; gj < gen.length; gj++) rem[gj] ^= gmul(gen[gj], cf);
+        var go = 0; while (go < rem.length && rem[go] === 0) go++; rem = rem.slice(go);
+      }
+      while (rem.length < deg) rem.unshift(0);
+      return rem.slice(-deg);
+    }
+
+    var base = Math.floor(dataTotal / nBlocks), remN = dataTotal - base * nBlocks;
+    var blocks = [], idx = 0;
+    for (var bl = 0; bl < nBlocks; bl++) {
+      var dlen = base + (bl >= nBlocks - remN ? 1 : 0);
+      var darr = dataCw.slice(idx, idx + dlen); idx += dlen;
+      blocks.push({ d: darr, e: rsEc(darr, ecPer) });
+    }
+    var cw = [], maxD = 0;
+    for (bl = 0; bl < nBlocks; bl++) if (blocks[bl].d.length > maxD) maxD = blocks[bl].d.length;
+    for (var ii = 0; ii < maxD; ii++) for (bl = 0; bl < nBlocks; bl++) if (ii < blocks[bl].d.length) cw.push(blocks[bl].d[ii]);
+    for (ii = 0; ii < ecPer; ii++) for (bl = 0; bl < nBlocks; bl++) cw.push(blocks[bl].e[ii]);
+
+    var bitIndex = 7, byteIndex = 0, inc = -1, row = N - 1;
+    for (var col = N - 1; col > 0; col -= 2) {
+      if (col === 6) col--;
+      while (true) {
+        for (var c = 0; c < 2; c++) {
+          var cc = col - c;
+          if (!R[row][cc]) {
+            var dark = false;
+            if (byteIndex < cw.length) dark = (((cw[byteIndex] >>> bitIndex) & 1) === 1);
+            if (((row + cc) & 1) === 0) dark = !dark;   // 掩码图案 0
+            M[row][cc] = dark ? 1 : 0;
+            bitIndex--; if (bitIndex === -1) { byteIndex++; bitIndex = 7; }
+          }
+        }
+        row += inc;
+        if (row < 0 || N <= row) { row -= inc; inc = -inc; break; }
+      }
+    }
+    var FMT = 0x77C4;   // ECC-L + 掩码0 的格式信息（所有版本相同）
+    for (var fi2 = 0; fi2 < 15; fi2++) {
+      var fm = ((FMT >>> fi2) & 1) === 1 ? 1 : 0;
+      if (fi2 < 6) M[fi2][8] = fm; else if (fi2 < 8) M[fi2 + 1][8] = fm; else M[N - 15 + fi2][8] = fm;
+      if (fi2 < 8) M[8][N - fi2 - 1] = fm; else if (fi2 < 9) M[8][15 - fi2 - 1 + 1] = fm; else M[8][15 - fi2 - 1] = fm;
+    }
+    M[N - 8][8] = 1;
+    if (vb !== null) {
+      for (k = 0; k < 18; k++) {
+        var vbit = ((vb >>> k) & 1) === 1 ? 1 : 0;
+        M[Math.floor(k / 3)][k % 3 + N - 11] = vbit;
+        M[k % 3 + N - 11][Math.floor(k / 3)] = vbit;
+      }
+    }
+    return M;
+  }
+
+  function toSvg(M) {
+    var N = M.length, Q = 6, QUIET = 4, dim = (N + QUIET * 2) * Q;
+    var s = '<svg xmlns="http://www.w3.org/2000/svg" width="' + dim + '" height="' + dim + '" viewBox="0 0 ' + dim + ' ' + dim + '">';
+    s += '<rect width="' + dim + '" height="' + dim + '" fill="#ffffff"/>';
+    for (var r = 0; r < N; r++) for (var c = 0; c < N; c++) {
+      if (M[r][c]) { var x = (c + QUIET) * Q, y = (r + QUIET) * Q; s += '<rect x="' + x + '" y="' + y + '" width="' + Q + '" height="' + Q + '" fill="#000000"/>'; }
+    }
+    s += '</svg>'; return s;
+  }
+
+  var text = String((params && params.text != null) ? params.text : (input == null ? '' : input));
+  text = text.replace(/^\\s+|\\s+$/g, '');
+  if (!text) return '请输入要生成二维码的内容（文字或链接）';
+  var M;
+  try { M = build(text); }
+  catch (e) { if (e && e.message === 'too_long') return '内容太长：最多约 270 个英文 / 90 个汉字，请缩短后再试'; throw e; }
+  return { files: [{ name: 'qrcode.svg', mediaType: 'image/svg+xml', dataUrl: 'data:image/svg+xml;base64,' + btoa(toSvg(M)) }] };
 }`,
   },
 ];
