@@ -1,7 +1,7 @@
 {
   "schemaVersion": "toolkit.developer-preview-public-repo-scaffold.v1",
   "packageName": "toolkit-builtins",
-  "generatedAt": "2026-09-03T13:28:10.703Z",
+  "generatedAt": "2026-10-12T02:19:24.001Z",
   "boundaryVersion": "toolkit.community-package-boundary.v1",
   "cleanSplitMode": "clean-directory-no-private-history",
   "registryTrust": "disabled-for-developer-preview",
@@ -37,8 +37,8 @@
     },
     {
       "path": "SECURITY.md",
-      "byteLength": 188,
-      "digest": "sha256:ea0c646c5f498a1b027ad5f88b94b52e5102cac738b36efdd1d82bbb509d94c0",
+      "byteLength": 191,
+      "digest": "sha256:9ec031d3a7bdf071f325540a44c153c3a560bb31157a0fb2938d3c3448e863bd",
       "generated": true
     },
     {
@@ -55,14 +55,14 @@
     },
     {
       "path": "README.md",
-      "byteLength": 845,
-      "digest": "sha256:d3986065074e862af0735258b5b995be44f9bbb330b4a31922dd592ce48da8ab",
+      "byteLength": 851,
+      "digest": "sha256:33aad6235d482d6d03a58850a672930e899e04145ec20e9c46447c3e527deb94",
       "generated": true
     },
     {
       "path": "package.json",
-      "byteLength": 407,
-      "digest": "sha256:25b3dc4e79c5a2a6fefa2c9fcf077489ad9ced7c3b7874b6a3fc313a0e152afe",
+      "byteLength": 406,
+      "digest": "sha256:a43a364b0c78d897971a34261b682f3df4e51498d9570cc18baa8a304e8a90fd",
       "generated": true
     },
     {
@@ -95,5 +95,5 @@
     ".github/workflows/release.yml"
   ],
   "protocolConformanceBundleDigest": "",
-  "digest": "sha256:e2b2980ba7887f18c8d245e18a926fd52efc1abab7d10493e7a898f997ca6963"
+  "digest": "sha256:1b8af40f1ee133deadd54505d979ffadcb2447d1b3da13841322f16625aaf868"
 }
